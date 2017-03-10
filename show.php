@@ -1,7 +1,6 @@
 <?php
 require 'common.php';
 require_once(ROOT.'/lib/httpRequest.php');
-
 $load_funds = true;
 function load_funds($stock_id)
 {
@@ -17,26 +16,6 @@ function load_funds($stock_id)
         return $json['title'];
     }
     return $res;
-}
-
-function multi_load_funds($stock_ids)
-{
-	$url_tag = 'http://stockpage.10jqka.com.cn/spService/stock_id/Funds/realFunds';
-	foreach($stock_ids as $id) {
-		$id = trim($id);
-		$urls[$id] = str_replace('stock_id', $id, $url_tag);
-	}
-	$response = curlMulti($urls);
-	$all_funds = array();
-	$funds = array("zlc"=>'--', "zlr"=>'--', "je"=> '--');
-	foreach($response as $id=>$value) {
-		if($json = json_decode($value, true)) {
-			$all_funds[$id] = $json['title'];
-		} else {
-			$all_funds[$id] = $funds;
-		}
-	}
-	return $all_funds;
 }
 
 function load_data()
@@ -60,27 +39,6 @@ function load_data()
 	}
 	return $show_info;
 }
-
-function multi_load_data()
-{
-	$url_tag = 'http://stockpage.10jqka.com.cn/spService/stock_id/Header/realHeader';
-	$stock_ids = file(ROOT . '/run_time/stock_id.txt');
-	$show_info = array();
-	if(empty($stock_ids)) return array();
-	foreach($stock_ids as $id) {
-		$id = trim($id);
-		$urls[$id] = str_replace('stock_id', $id, $url_tag);
-	}
-	$all_infos = curlMulti($urls);
-	$all_funds = multi_load_funds($stock_ids);
-	foreach($all_infos as $id=>$info){
-		if($res = json_decode($info, true)) {
-			$show_info[] = array_merge($res, $all_funds[$id]);
-		}
-	}
-	return $show_info;
-}
-
 
 function show_data($show_info = array())
 {
@@ -120,18 +78,18 @@ function clear_show($lines=0)
 	}
 }
 
-$data = multi_load_data();
+$data = load_data();
 while(true) {
 	list($m, $s) = explode(" ", microtime());
 	$start = $s+$m;
 	$lines = show_data($data);
-	$data = multi_load_data();
+	$data = load_data();
 	list($m, $s) = explode(" ", microtime());
 	$take_time = ($m + $s - $start) * 1000000;
-    if($take_time <= 2000000) {
+    if($take_time <= 1000000) {
         // 正常情况下保障秒级别的更新
-        usleep(2000000 - $take_time);
-	}
+        usleep(1000000 - $take_time);
+    }
 	clear_show($lines);
 }
 
